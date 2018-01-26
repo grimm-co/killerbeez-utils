@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 typedef struct mutator
 {
 	void * (*create)(char * options, char * state, char * input, size_t input_length);
@@ -13,3 +15,7 @@ typedef struct mutator
 	int(*set_input)(void * mutator_state, char * new_input, size_t input_length);
 	int(*help)(char **help_str);
 } mutator_t;
+
+#ifndef ssize_t
+#define ssize_t int64_t
+#endif

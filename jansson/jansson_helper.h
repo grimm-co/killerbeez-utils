@@ -21,6 +21,35 @@ extern "C" {
 		state->name = tempi_##name;                                            \
 	}
 
+#define PARSE_OPTION_UINT64T(state, options, name, name_literal, fail_func)             \
+	int result_##name = 0;                                                              \
+	uint64_t tempi_##name = get_uint64t_options(options, name_literal, &result_##name); \
+	if (result_##name < 0)                                                              \
+	{                                                                                   \
+		fail_func(state);                                                               \
+		return NULL;                                                                    \
+	}                                                                                   \
+	else if (result_##name > 0)                                                         \
+	{                                                                                   \
+		state->name = tempi_##name;                                                     \
+	}
+
+/**
+ * The samae as PARSE_OPTION_UINT64T, but allows you to specify the name to use for the temporary variables
+ */
+#define PARSE_OPTION_UINT64T_TEMP(state, options, name, name_literal, fail_func, temp_name) \
+	int result_##temp_name = 0;                                                                   \
+	uint64_t tempi_##temp_name = get_uint64t_options(options, name_literal, &result_##temp_name); \
+	if (result_##temp_name < 0)                                                                   \
+	{                                                                                             \
+		fail_func(state);                                                                         \
+		return NULL;                                                                              \
+	}                                                                                             \
+	else if (result_##temp_name > 0)                                                              \
+	{                                                                                             \
+		state->name = tempi_##temp_name;                                                          \
+	}
+
 #define PARSE_OPTION_STRING(state, options, name, name_literal, fail_func)           \
 	int result_##name = 0;                                                           \
 	char * temps_##name = get_string_options(options, name_literal, &result_##name); \
@@ -108,6 +137,9 @@ JANSSON_API char * get_mem_options_from_json(json_t * root, char * option_name, 
 
 JANSSON_API int get_int_options(char * options, char * option_name, int * result);
 JANSSON_API int get_int_options_from_json(json_t * root, char * option_name, int * result);
+
+JANSSON_API uint64_t get_uint64t_options(char * options, char * option_name, int * result);
+JANSSON_API uint64_t get_uint64t_options_from_json(json_t * root, char * option_name, int * result);
 
 JANSSON_API char ** get_array_options(char * options, char * option_name, size_t * count, int * result);
 

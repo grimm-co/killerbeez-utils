@@ -18,13 +18,13 @@ json_t * get_root_option_json_object(char * json_string)
 	root = json_loads(json_string, 0, &error);
 	if (!root)
 	{
-		fprintf(stderr, "json error in WMP options: on line %d: %s\n", error.line, error.text);
+		fprintf(stderr, "json error in options: on line %d: %s\n", error.line, error.text);
 		return NULL;
 	}
 
 	if (!json_is_object(root))
 	{
-		fprintf(stderr, "json error in WMP options: root is not an array\n");
+		fprintf(stderr, "json error in options: root is not an array\n");
 		json_decref(root);
 		return NULL;
 	}
@@ -89,8 +89,7 @@ static char * get_string_options_inner(json_t * root, char * option_name, int * 
  */
 char * get_string_options(char * json_string, char * option_name, int * result)
 {
-	json_t * root, *option_item;
-	char * option_value;
+	json_t * root;
 
 	*result = -1;
 	root = get_root_option_json_object(json_string);
@@ -176,8 +175,7 @@ static char * get_mem_options_inner(json_t * root, char * option_name, int * res
  */
 char * get_mem_options(char * json_string, char * option_name, int * result)
 {
-	json_t * root, *option_item;
-	char * option_value;
+	json_t * root;
 
 	*result = -1;
 	root = get_root_option_json_object(json_string);
@@ -216,10 +214,10 @@ char * get_mem_options_from_json(json_t * root, char * option_name, int * result
  * wasn't found or the wrong type.  Check the value of the result parameter to differentiate
  * between the attribute value of -1 or failure to get the value.
  */
-static int get_int_options_inner(json_t * root, char * option_name, int * result, int should_free)
+static long long get_int_options_inner(json_t * root, char * option_name, int * result, int should_free)
 {
 	json_t *option_item;
-	int option_value;
+	long long option_value;
 
 	option_item = json_object_get(root, option_name);
 	if (!option_item)
@@ -239,7 +237,7 @@ static int get_int_options_inner(json_t * root, char * option_name, int * result
 		return -1;
 	}
 
-	option_value = (int)json_integer_value(option_item);
+	option_value = json_integer_value(option_item);
 	*result = 1;
 	if (should_free)
 		json_decref(root);
@@ -261,14 +259,13 @@ static int get_int_options_inner(json_t * root, char * option_name, int * result
  */
 int get_int_options(char * json_string, char * option_name, int * result)
 {
-	json_t * root, *option_item;
-	int option_value;
+	json_t * root;
 
 	*result = -1;
 	root = get_root_option_json_object(json_string);
 	if (!root)
 		return -1;
-	return get_int_options_inner(root, option_name, result, 1);
+	return (int)get_int_options_inner(root, option_name, result, 1);
 }
 
 /**
@@ -285,7 +282,48 @@ int get_int_options(char * json_string, char * option_name, int * result)
 */
 int get_int_options_from_json(json_t * root, char * option_name, int * result)
 {
-	return get_int_options_inner(root, option_name, result, 0);
+	return (int)get_int_options_inner(root, option_name, result, 0);
+}
+
+/**
+* Gets a uint64_t attribute value from a JSON string
+* @param json_string - the json_t string to parse and obtain the attribute value from
+* @param option_name - the name of the attribute to get
+* @param result - a pointer to an integer to return the results of trying to get
+* the attribute value.  The value 0 is returned if the attribute isn't found, -1
+* if the attribute is found but not an integer, and 1 if the attribute is found and
+* an integer.
+* @return - the uint64_t value of the specified attribute on success, or -1 if the json
+* couldn't be parsed, the attribute wasn't found, or the attribute was the wrong type.
+* Check the value of the result parameter to differentiate between the attribute value
+* of -1 or failure to get the value.s
+*/
+uint64_t get_uint64t_options(char * json_string, char * option_name, int * result)
+{
+	json_t * root;
+
+	*result = -1;
+	root = get_root_option_json_object(json_string);
+	if (!root)
+		return -1;
+	return (uint64_t)get_int_options_inner(root, option_name, result, 1);
+}
+
+/**
+* Gets a uint64_t attribute value from a json_t object
+* @param root - the json_t object to get the attribute from
+* @param option_name - the name of the attribute to get
+* @param result - a pointer to an integer to return the results of trying to get
+* the attribute value.  The value 0 is returned if the attribute isn't found, -1
+* if the attribute is found but not an integer, and 1 if the attribute is found and
+* an integer.
+* @return - the uint64_t value of the specified attribute on success, or -1 if the attribute
+* wasn't found or the wrong type.  Check the value of the result parameter to differentiate
+* between the attribute value of -1 or failure to get the value.
+*/
+uint64_t get_uint64t_options_from_json(json_t * root, char * option_name, int * result)
+{
+	return (uint64_t)get_int_options_inner(root, option_name, result, 0);
 }
 
 /**

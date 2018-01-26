@@ -57,3 +57,8 @@ if(!strcmp(argv[i], x))               \
 #define ELSE_IF_ARGINT_OPTION(x, y)    else IF_ARGINT_OPTION(x,y)
 #define ELSE_IF_ARGDOUBLE_OPTION(x, y) else IF_ARGDOUBLE_OPTION(x,y)
 #define ELSE_IF_ARG_SET_TRUE(x, y)     else IF_ARG_SET_TRUE(x,y)
+
+/**
+ * Get the number of items in an array
+ */
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof(*x))
