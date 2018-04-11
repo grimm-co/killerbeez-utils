@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2009-2016 Petri Lehtinen <petri@digip.org>
+ *
+ * Jansson is free software; you can redistribute it and/or modify
+ * it under the terms of the MIT license. See MIT for details.
+ */
+
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
