@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2009-2016 Petri Lehtinen <petri@digip.org>
+ *
+ * Jansson is free software; you can redistribute it and/or modify
+ * it under the terms of the MIT license. See MIT for details.
+ */
+
 /* #undef HAVE_ENDIAN_H */
 #define HAVE_FCNTL_H 1
 /* #undef HAVE_SCHED_H */
@@ -39,12 +46,6 @@
 #define HAVE_UINT8_T 1
 #ifndef HAVE_UINT8_T
 #  define uint8_t uint8_t
-#endif
-
-/* #undef HAVE_SSIZE_T */
-
-#ifndef HAVE_SSIZE_T
-#  define ssize_t int
 #endif
 
 #define USE_URANDOM 1

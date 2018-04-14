@@ -2,7 +2,7 @@
  * Copyright (c) 2009-2016 Petri Lehtinen <petri@digip.org>
  *
  * Jansson is free software; you can redistribute it and/or modify
- * it under the terms of the MIT license. See LICENSE for details.
+ * it under the terms of the MIT license. See MIT for details.
  */
 
 #ifndef JANSSON_PRIVATE_H
@@ -80,6 +80,9 @@ typedef struct {
 
 /* Create a string by taking ownership of an existing buffer */
 json_t *jsonp_stringn_nocheck_own(const char *value, size_t len);
+
+/* Create a mem object by taking ownership of an existing buffer */
+json_t *json_mem_own(const char *value, size_t len);
 
 /* Error message formatting */
 void jsonp_error_init(json_error_t *error, const char *source);

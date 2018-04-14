@@ -2,7 +2,7 @@
  * Copyright (c) 2009-2016 Petri Lehtinen <petri@digip.org>
  *
  * This library is free software; you can redistribute it and/or modify
- * it under the terms of the MIT license. See LICENSE for details.
+ * it under the terms of the MIT license. See MIT for details.
  */
 
 #if HAVE_CONFIG_H
@@ -16,7 +16,7 @@
 #include <stdint.h>
 #endif
 
-#include <jansson_config.h>   /* for JSON_INLINE */
+#include "jansson_config.h"   /* for JSON_INLINE */
 #include "jansson_private.h"  /* for container_of() */
 #include "hashtable.h"
 

@@ -2,7 +2,7 @@
 * Copyright (c) 2009-2016 Petri Lehtinen <petri@digip.org>
 *
 * Jansson is free software; you can redistribute it and/or modify
-* it under the terms of the MIT license. See LICENSE for details.
+* it under the terms of the MIT license. See MIT for details.
 */
 
 #ifndef JANSSON_H
@@ -14,10 +14,18 @@
 
 #include "jansson_config.h"
 
-#ifdef JANSSON_EXPORTS
+#ifdef _WIN32
+#if defined(JANSSON_EXPORTS)
 #define JANSSON_API __declspec(dllexport)
+#elif defined(JANSSON_NO_IMPORT)
+#define JANSSON_API
+#elif defined(__cplusplus)
+#define JANSSON_API extern "C" __declspec(dllimport)
 #else
 #define JANSSON_API __declspec(dllimport)
+#endif
+#else //_WIN32
+#define JANSSON_API
 #endif
 
 #ifdef __cplusplus

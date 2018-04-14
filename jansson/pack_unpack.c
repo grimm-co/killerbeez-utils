@@ -3,7 +3,7 @@
  * Copyright (c) 2011-2012 Graeme Smecher <graeme.smecher@mail.mcgill.ca>
  *
  * Jansson is free software; you can redistribute it and/or modify
- * it under the terms of the MIT license. See LICENSE for details.
+ * it under the terms of the MIT license. See MIT for details.
  */
 
 #include <string.h>

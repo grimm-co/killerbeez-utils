@@ -2,7 +2,7 @@
  * Copyright (c) 2009-2016 Petri Lehtinen <petri@digip.org>
  *
  * Jansson is free software; you can redistribute it and/or modify
- * it under the terms of the MIT license. See LICENSE for details.
+ * it under the terms of the MIT license. See MIT for details.
  */
 
 #ifndef _GNU_SOURCE
@@ -107,9 +107,9 @@ static int dump_mem(const char *mem, size_t len, json_dump_callback_t dump, void
 	if (dump("\"" MEM_TOKEN, 1 + strlen(MEM_TOKEN), data))
 		return -1;
 
-	for (pos = mem; pos < mem + len; pos += num_chars / 2)
+	for (pos = (const unsigned char *)mem; pos < (const unsigned char *)(mem + len); pos += num_chars / 2)
 	{
-		if (pos + 0x20 < mem + len)
+		if (pos + 0x20 < (const unsigned char *)(mem + len))
 			num_chars = snprintf(buffer, sizeof(buffer), 
 				"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
 				"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",

@@ -2,7 +2,7 @@
  * Copyright (c) 2010-2016 Petri Lehtinen <petri@digip.org>
  *
  * Jansson is free software; you can redistribute it and/or modify
- * it under the terms of the MIT license. See LICENSE for details.
+ * it under the terms of the MIT license. See MIT for details.
  *
  *
  * This file specifies a part of the site-specific configuration for
@@ -53,7 +53,11 @@
 
 #define json_int_t long long
 #define json_strtoint strtoll
+#ifdef _WIN32
 #define JSON_INTEGER_FORMAT "I64d"
+#else
+#define JSON_INTEGER_FORMAT "lld"
+#endif
 
 
 /* If locale.h and localeconv() are available, define to 1, otherwise to 0. */

@@ -2,7 +2,7 @@
  * Copyright (c) 2009-2016 Petri Lehtinen <petri@digip.org>
  *
  * Jansson is free software; you can redistribute it and/or modify
- * it under the terms of the MIT license. See LICENSE for details.
+ * it under the terms of the MIT license. See MIT for details.
  */
 
 #ifndef _GNU_SOURCE
@@ -817,8 +817,9 @@ static json_t *parse_value(lex_t *lex, size_t flags, json_error_t *error)
 	switch (lex->token) {
 	case TOKEN_STRING: {
 		const char *value = lex->value.string.val;
-		size_t i, len = lex->value.string.len;
-		unsigned char * temp, *mem, *pos;
+		size_t len = lex->value.string.len;
+		unsigned char * temp, *mem;
+		const char *pos;
 
 		if (len >= MEM_TOKEN_LEN && !memcmp(value, MEM_TOKEN, MEM_TOKEN_LEN))
 		{
@@ -844,7 +845,7 @@ static json_t *parse_value(lex_t *lex, size_t flags, json_error_t *error)
 				}
 				else
 				{
-					sscanf(value + (i * 2), "%02hhx", temp + i);
+					sscanf(pos, "%02hhx", temp);
 					num_read = 2;
 				}
 			}

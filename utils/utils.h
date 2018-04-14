@@ -1,31 +1,105 @@
 #pragma once
 
+#ifdef _WIN32
 #include <Windows.h>
-#include <stdint.h>
+#else
+#include <pthread.h>
+#include <semaphore.h>
+#ifdef __APPLE__
+#include <sys/syslimits.h>
+#else
+#include <linux/limits.h>
+#endif
+#endif
 
-// The following ifdef block is the standard way of creating macros which make exporting 
-// from a DLL simpler. All files within this DLL are compiled with the UTILS_EXPORTS
-// symbol defined on the command line. This symbol should not be defined on any project
-// that uses this DLL. This way any other project whose source files include this file see 
-// UTILS_API functions as being imported from a DLL, whereas this DLL sees symbols
-// defined with this macro as being exported.
-#ifdef UTILS_EXPORTS
+#include <stdint.h>
+#include <stdlib.h>
+
+#ifdef _WIN32
+#if defined(UTILS_EXPORTS)
 #define UTILS_API __declspec(dllexport)
+#elif defined(UTILS_NO_IMPORT)
+#define UTILS_API
+#elif defined(__cplusplus)
+#define UTILS_API extern "C" __declspec(dllimport)
 #else
 #define UTILS_API __declspec(dllimport)
 #endif
+#else //_WIN32
+#define UTILS_API
+#endif
 
+#ifndef MAX_PATH
+#define MAX_PATH PATH_MAX
+#endif
+
+#ifdef _WIN32
+typedef HANDLE mutex_t;
+typedef HANDLE semaphore_t;
+#else
+typedef pthread_mutex_t * mutex_t;
+typedef sem_t * semaphore_t;
+#endif
+
+#ifdef _WIN32
 UTILS_API int is_process_alive(HANDLE process);
 UTILS_API int start_process_and_write_to_stdin(char * cmd_line, char * input, size_t input_length, HANDLE * process_out);
+UTILS_API int start_process_and_write_to_stdin_flags(char * cmd_line, char * input, size_t input_length, HANDLE * process_out, DWORD creation_flags);
 UTILS_API int start_process_and_write_to_stdin_and_save_pipes_timeout(char * cmd_line, char * input, size_t input_length, HANDLE * process_out, HANDLE * pipe_rd_ptr, HANDLE * pipe_wr_ptr, DWORD timeout_ms);
 UTILS_API int WriteToPipe(HANDLE process, HANDLE pipe_wr, HANDLE pipe_rd, char * input, size_t input_length, DWORD timeout_ms);
 UTILS_API int FlushPipe(HANDLE pipe_rd);
 UTILS_API wchar_t * convert_char_array_to_wchar(char * string, wchar_t * out_buffer);
+UTILS_API char * convert_wchar_array_to_char(wchar_t * string, char * out_buffer);
 UTILS_API int write_buffer_to_file(char * filename, char * buffer, size_t length);
-UTILS_API int read_file(char * filename, char **buffer);
 UTILS_API char * get_temp_filename(char * suffix);
 UTILS_API int file_exists(char * path);
+#endif
+
+UTILS_API char * filename_relative_to_binary_dir(char * relative_path);
+UTILS_API int read_file(char * filename, char **buffer);
 UTILS_API void print_hex(char * data, size_t size);
+UTILS_API void md5(uint8_t *initial_msg, size_t initial_len, char * output, size_t output_size);
+UTILS_API void * memdup(void * src, size_t length);
+
+UTILS_API mutex_t create_mutex(void);
+UTILS_API int take_mutex(mutex_t mutex);
+UTILS_API int release_mutex(mutex_t mutex);
+UTILS_API void destroy_mutex(mutex_t mutex);
+UTILS_API semaphore_t create_semaphore(int initial, int max);
+UTILS_API int take_semaphore(semaphore_t semaphore);
+UTILS_API int release_semaphore(semaphore_t semaphore);
+UTILS_API void destroy_semaphore(semaphore_t semaphore);
+
+#ifndef _WIN32
+UTILS_API int start_process_and_write_to_stdin(char * cmd_line, char * input, size_t input_length, pid_t * process_out);
+#endif
+
+//Logging
+enum LOG_LEVEL {
+	DEBUG,
+	INFO,
+	WARNING,
+	ERROR_LEVEL, //ERROR is already taken
+	CRITICAL,
+	FATAL,
+	MAX_LOG_LEVEL,
+};
+
+#if defined(DEBUG) || defined(_DEBUG)
+#define DEBUG_MSG(msg, ...) log_msg(DEBUG, msg, ##__VA_ARGS__)
+#else
+#define DEBUG_MSG(msg, ...)
+#endif
+
+#define INFO_MSG(msg, ...) log_msg(INFO, msg, ##__VA_ARGS__)
+#define WARNING_MSG(msg, ...) log_msg(WARNING, msg, ##__VA_ARGS__)
+#define ERROR_MSG(msg, ...) log_msg(ERROR_LEVEL, msg, ##__VA_ARGS__)
+#define CRITICAL_MSG(msg, ...) log_msg(CRITICAL, msg, ##__VA_ARGS__)
+#define FATAL_MSG(msg, ...) log_msg(FATAL, msg, ##__VA_ARGS__)
+
+UTILS_API char * logging_help(void);
+UTILS_API int setup_logging(const char * log_options);
+UTILS_API int log_msg(enum LOG_LEVEL level, const char * msg, ...);
 
 //Argument parser helpers
 
