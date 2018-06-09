@@ -180,7 +180,7 @@ UTILS_API int start_process_and_write_to_stdin(char * cmd_line, char * input, si
   * @param creation_flags - The creation flags that should be passed to the CreateProcess Windows API
   * @return - zero on success, non-zero on failure
   */
-UTILS_API int start_process_and_write_to_stdin_flags(char * cmd_line, char * input, size_t input_length, HANDLE * process_out, int creation_flags)
+UTILS_API int start_process_and_write_to_stdin_flags(char * cmd_line, char * input, size_t input_length, HANDLE * process_out, DWORD creation_flags)
 {
 	return start_process_and_write_to_stdin_inner(cmd_line, input, input_length, process_out, NULL, NULL, 0, creation_flags);
 }
