@@ -19,6 +19,7 @@ target_link_libraries(utils jansson)
 add_library(utils_object OBJECT ${UTILS_SRC})
 if (NOT WIN32)
   set_target_properties(utils_object PROPERTIES COMPILE_FLAGS "-fPIC")
+  target_link_libraries(utils pthread dl)
 endif (NOT WIN32)
 target_compile_definitions(utils_object PUBLIC UTILS_NO_IMPORT)
 

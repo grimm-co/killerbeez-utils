@@ -24,6 +24,8 @@
 #include <libgen.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <wordexp.h>
@@ -264,7 +266,7 @@ UTILS_API int WriteToPipe(HANDLE process, HANDLE pipe_wr, HANDLE pipe_rd, char *
 	FILETIME start_time, time;
 
 	GetSystemTimeAsFileTime(&start_time);
-	while (total_written < input_length && is_process_alive(process))
+	while (total_written < input_length && get_process_status(process))
 	{
 		if (!GetNamedPipeInfo(pipe_wr, NULL, &out_size, NULL, NULL))
 			break;
@@ -287,21 +289,6 @@ UTILS_API int WriteToPipe(HANDLE process, HANDLE pipe_wr, HANDLE pipe_rd, char *
 		}
 	}
 	return total_written != input_length;
-}
-
-/**
- * Determines whether a file exists or not
- * @param path - The path of the file to check for existence
- * @return - 1 if the file exists, 0 otherwise
- */
-UTILS_API int file_exists(char * path)
-{
-	WIN32_FIND_DATA FindFileData;
-	HANDLE handle = FindFirstFile(path, &FindFileData);
-	int found = handle != INVALID_HANDLE_VALUE;
-	if (found)
-		FindClose(handle);
-	return found;
 }
 
 /**
@@ -328,17 +315,135 @@ UTILS_API int FlushPipe(HANDLE pipe_rd)
 	return failed;
 }
 
+#endif //_WIN32
+
 /**
  * This function checks if a process is still alive
  * @param - a HANDLE to the process to check
- * @return - 1 if the process is alive, 0 if it is not, -1 on failure
+ * @return - FUZZ_RUNNING (1) if the process is alive, FUZZ_NONE (0) if it is not, FUZZ_ERROR (-1) on failure
  */
-UTILS_API int is_process_alive(HANDLE process)
+#ifdef _WIN32
+UTILS_API int get_process_status(HANDLE process)
 {
 	DWORD exitCode;
 	if (GetExitCodeProcess(process, &exitCode) == 0)
-		return -1;
+		return FUZZ_ERROR;
 	return exitCode == STILL_ACTIVE;
+}
+#else
+/**
+ * This function checks if a CHILD process is still alive
+ * @return - FUZZ_CRASH (2) if the process exited by crash, FUZZ_RUNNING (1) if
+ * the process is alive, FUZZ_NONE (0) if it exited cleanly, FUZZ_ERROR (-1) on
+ * failure
+ *
+ * NOTE: This should only be called once after a process has terminated.
+ *
+ */
+UTILS_API int get_process_status(pid_t pid)
+{
+
+	// We can't use kill here, because it'll return "alive" if the process is
+	// in a zombie state (ie, unreaped).  So, we have to reap here.
+
+	int status[1];
+	pid_t result;
+
+	// WNOHANG result: 0 means it exists and is alive, pid means it has exited,
+	// -1 means error
+	result = waitpid(pid, status, WNOHANG);
+
+	if (result == 0)
+		return FUZZ_RUNNING;
+	else if (result > 0)
+	{
+		if (WIFEXITED(*status))
+			return FUZZ_NONE; // it exited normally
+		else
+			return FUZZ_CRASH; // it crashed
+	}
+	else // result < 0 , we already checked, bad
+		return FUZZ_ERROR;
+}
+#endif
+
+/**
+ * Generates a temporary filename
+ * @param suffix - Optionally, a suffix to append to the generated temporary filename.  If NULL,
+ * no file extension will be added.
+ * @return - NULL on failure, or a newly allocated character buffer holding the temporary filename.
+ * The caller should free the returned buffer
+ */
+UTILS_API char * get_temp_filename(char * suffix)
+{
+#ifdef _WIN32
+	char temp_dir[MAX_PATH];
+	char temp_filename[MAX_PATH];
+	char * ret;
+	size_t suffix_length = 0;
+
+	//Get the temp filename
+	// eg C:\Users\<name>\AppData\Local\Temp\ 
+	if (GetTempPath(MAX_PATH, temp_dir) == 0)
+		return NULL;
+	// eg C:\Users\<name>\AppData\Local\Temp\fuzD828.tmp
+	GetTempFileName(temp_dir, "fuzzfile", 0, temp_filename);
+
+	//Add the suffix and convert it to a useable format
+	if (suffix)
+		suffix_length = strlen(suffix);
+
+	ret = (char *)malloc(MAX_PATH + suffix_length);
+	if (!ret)
+		return NULL;
+
+	memset(ret, 0, MAX_PATH + suffix_length);
+	strncpy(ret, temp_filename, MAX_PATH);
+	unlink(ret); //Cleanup the file without the extension that GetTempFileName generated
+	if(suffix)
+		strncat(ret, suffix, MAX_PATH + suffix_length);
+	// eg C:\Users\<name>\AppData\Local\Temp\fuzFEAD.tmp.txt
+
+#else
+	// on macOS we can use $TMPDIR. ubuntu doesn't seem to have one, stackoverflow recommends
+	// /tmp. /dev/shm might be a better option, because it's a tmpfs (doesn't write to disk)
+	// but i suspect it's less portable to other *nixes.
+	char temp_filename[] = "/tmp/fuzzfileXXXXXX"; // X's required for mktemp
+	char * ret;
+	size_t suffix_length = 0;
+
+	// mktemp is unsafe, but i'm not sure what the threat model is.
+	// for ours, it might be sufficient.
+	// alternatively, we can mkstemp, but that will also create a file
+	// (as is happening in the windows version of the code) and requires deletion.
+	// that's probably as simple as an unlink(), but it's almost certainly slower.
+	mktemp(temp_filename);
+
+	if (suffix)
+		suffix_length = strlen(suffix);
+
+	ret = (char *)malloc(MAX_PATH + suffix_length);
+	if (!ret)
+		return NULL;
+
+	memset(ret, 0, MAX_PATH + suffix_length);
+	strncpy(ret, temp_filename, MAX_PATH);
+	if(suffix)
+		strncat(ret, suffix, MAX_PATH + suffix_length);
+
+#endif
+
+	return ret;
+}
+
+/**
+ * Determines whether a file exists or not
+ * @param path - The path of the file to check for existence
+ * @return - 1 if the file exists, 0 otherwise
+ */
+UTILS_API int file_exists(char * path)
+{
+	return !access(path,F_OK);
 }
 
 /**
@@ -378,43 +483,6 @@ UTILS_API int write_buffer_to_file(char * filename, char * buffer, size_t length
 }
 
 /**
- * Generates a temporary filename
- * @param suffix - Optionally, a suffix to append to the generated temporary filename.  If NULL,
- * no file extension will be added.
- * @return - NULL on failure, or a newly allocated character buffer holding the temporary filename.
- * The caller should free the returned buffer
- */
-UTILS_API char * get_temp_filename(char * suffix)
-{
-	char temp_dir[MAX_PATH];
-	char temp_filename[MAX_PATH];
-	char * ret;
-	size_t suffix_length = 0;
-
-	//Get the temp filename
-	if (GetTempPath(MAX_PATH, temp_dir) == 0)
-		return NULL;
-	GetTempFileName(temp_dir, "fuzzfile", 0, temp_filename);
-
-	//Add the suffix and convert it to a useable format
-	if (suffix)
-		suffix_length = strlen(suffix);
-	ret = (char *)malloc(MAX_PATH + suffix_length);
-	if (!ret)
-		return NULL;
-
-	memset(ret, 0, MAX_PATH + suffix_length);
-	strncpy(ret, temp_filename, MAX_PATH);
-	unlink(ret); //Cleanup the file without the extension that GetTempFileName generated
-	if(suffix)
-		strncat(ret, suffix, MAX_PATH + suffix_length);
-
-	return ret;
-}
-
-#endif //_WIN32
-
-/**
 * This function takes a relative path representing a location relative to the
 * running binary (note: NOT the working directory) and returns the
 * corresponding absolute path, if that path exists in the filesystem.
@@ -445,7 +513,7 @@ UTILS_API char * filename_relative_to_binary_dir(char * relative_path) {
 		return NULL;
 	}
 
-	if (access(temppath, F_OK)) {
+	if (!file_exists(temppath)) {
 		return NULL;
 	}
 	return strdup(temppath);
@@ -972,16 +1040,32 @@ UTILS_API int start_process_and_write_to_stdin(char * cmd_line, char * input, si
 		wordfree (&wordexp_result);
 		return 1;
 	} else if(child_pid == 0) { //Child
-		close(pipes[1]);
-		close(0);
-		dup2(pipes[0], 0);
+
+		// Open a file descriptor to /dev/null. I don't believe this needs to be closed.
+		int dev_null = open("/dev/null", O_WRONLY);
+		if (dev_null == -1 )
+			FATAL_MSG("Couldn't open /dev/null for child process.");
+
+		close(pipes[1]); // close the in side of the pipe for the child
+		// connect read side of pipe to child's stdin, closing the in side of the pipe for the child
+		dup2(pipes[0], STDIN_FILENO);
+		close(pipes[0]); // close fd attached to out side of pipe
+
+		// redirect child's stdout/stderr to devnull
+		dup2(dev_null, STDOUT_FILENO);
+		dup2(dev_null, STDERR_FILENO);
+
+		// fd 1/2 now point to /dev/null, so it stays open.
+		close(dev_null);
+
 		execv(wordexp_result.we_wordv[0], wordexp_result.we_wordv);
 		exit(EXIT_FAILURE);
-	}
+	} // back to parent code
 
 	wordfree (&wordexp_result);
 	close(pipes[0]);
 
+	// Write the fuzz input to the child, from the parent.
 	while (total_written < input_length)
 	{
 		result = write(pipes[1], input + total_written, input_length - total_written);
@@ -990,8 +1074,10 @@ UTILS_API int start_process_and_write_to_stdin(char * cmd_line, char * input, si
 		else if (result < 0 && errno != EAGAIN) //Error, then break
 			break;
 	}
+
 	close(pipes[1]);
 
+	// If the child stopped accepting input (write failed)
 	if(total_written != input_length)
 	{
 		kill(child_pid, 9);
