@@ -460,13 +460,17 @@ UTILS_API int write_buffer_to_file(char * filename, char * buffer, size_t length
 	FILE * fp = NULL;
 	int error = EACCES;
 
-	//We need to do this in a loop, since we may need to wait for
-	//a process to stop holding this file
+#ifdef _WIN32
+	//On Windows, we need to do this in a loop, since we may
+	//need to wait for a process to stop holding this file
 	while (!fp && error == EACCES)
 	{
 		fp = fopen(filename, "wb+");
 		error = errno;
 	}
+#else
+	fp = fopen(filename, "wb+");
+#endif
 	if (!fp)
 		return -1;
 
@@ -1006,6 +1010,56 @@ UTILS_API void destroy_semaphore(semaphore_t semaphore)
 #ifndef _WIN32
 
 /**
+ * This function takes a command line and splits it into the executable filename and
+ * the argv-array style arguments.
+ * @param cmd_line - the command line to split
+ * @param executable - A pointer that will be assigned the filename of the executable
+ * in the command line.  The assigned pointer should be freed by the caller.
+ * @param argv - A pointer that will be assigned the address of an argv style arguments
+ * array.  This array and each item in it should be freed by the caller.
+ * @return - 0 on success, non-zero on failure
+ */
+UTILS_API int split_command_line(char * cmd_line, char ** executable, char ***argv)
+{
+	wordexp_t wordexp_result;
+	size_t i, j;
+	char * target_executable, **target_argv;
+
+	// Expand the command line into the program and arguments
+	if(wordexp(cmd_line, &wordexp_result, 0)) {
+		wordfree(&wordexp_result);
+		return -1;
+	}
+
+	target_executable = strdup(wordexp_result.we_wordv[0]);
+	target_argv = malloc(sizeof(char *) * (wordexp_result.we_wordc+1));
+	if(!target_executable || !target_argv) {
+		free(target_executable);
+		free(target_argv);
+		wordfree (&wordexp_result);
+		return -1;
+	}
+
+	for(i = 0; i < wordexp_result.we_wordc; i++) {
+		target_argv[i] = strdup(wordexp_result.we_wordv[i]);
+		if(!target_argv[i]) {
+			free(target_executable);
+			for(j = 0; j < i; j++)
+				free(target_argv[j]);
+			free(target_argv);
+			wordfree (&wordexp_result);
+			return -1;
+		}
+	}
+	target_argv[wordexp_result.we_wordc] = NULL;
+
+	wordfree (&wordexp_result);
+	*executable = target_executable;
+	*argv = target_argv;
+	return 0;
+}
+
+/**
  * This function starts a process and writes to the stdin of the process.
  * @param cmd_line - The command line of the new process to start.  The command line must start with the
  * path of the executable to start.
@@ -1021,25 +1075,18 @@ UTILS_API int start_process_and_write_to_stdin(char * cmd_line, char * input, si
 	pid_t child_pid;
 	ssize_t result;
 	size_t total_written = 0;
-	wordexp_t wordexp_result;
+	char * executable, **argv;
 
-	// Expand the command line into the program and arguments
-	if((status = wordexp(cmd_line, &wordexp_result, 0))) {
-		if(status == WRDE_NOSPACE)
-			wordfree (&wordexp_result);
-		return -1;
-	}
-
-	if(pipe(pipes)) {
-		wordfree (&wordexp_result);
+	if(split_command_line(cmd_line, &executable, &argv))
 		return 1;
-	}
+
+	if(pipe(pipes))
+		return 1;
 
 	child_pid = fork();
-	if(child_pid < 0) {
-		wordfree (&wordexp_result);
+	if(child_pid < 0)
 		return 1;
-	} else if(child_pid == 0) { //Child
+	else if(child_pid == 0) { //Child
 
 		// Open a file descriptor to /dev/null. I don't believe this needs to be closed.
 		int dev_null = open("/dev/null", O_WRONLY);
@@ -1058,11 +1105,10 @@ UTILS_API int start_process_and_write_to_stdin(char * cmd_line, char * input, si
 		// fd 1/2 now point to /dev/null, so it stays open.
 		close(dev_null);
 
-		execv(wordexp_result.we_wordv[0], wordexp_result.we_wordv);
+		execv(executable, argv);
 		exit(EXIT_FAILURE);
 	} // back to parent code
 
-	wordfree (&wordexp_result);
 	close(pipes[0]);
 
 	// Write the fuzz input to the child, from the parent.
@@ -1084,6 +1130,11 @@ UTILS_API int start_process_and_write_to_stdin(char * cmd_line, char * input, si
 		wait(&status);
 		return 1;
 	}
+
+	free(executable);
+	for(i = 0; argv[i]; i++)
+		free(argv[i]);
+	free(argv);
 
 	*process_out = child_pid;
 	return 0;
