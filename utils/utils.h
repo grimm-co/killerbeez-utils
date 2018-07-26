@@ -80,6 +80,7 @@ UTILS_API int release_semaphore(semaphore_t semaphore);
 UTILS_API void destroy_semaphore(semaphore_t semaphore);
 
 #ifndef _WIN32
+UTILS_API int split_command_line(char * cmd_line, char ** executable, char ***argv);
 UTILS_API int start_process_and_write_to_stdin(char * cmd_line, char * input, size_t input_length, pid_t * process_out);
 #endif
 
