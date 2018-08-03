@@ -680,11 +680,13 @@ const char * log_level_names[] = {
 UTILS_API char * logging_help(void)
 {
 	return strdup(
-		"Logging Options:\n"
-		"\tfile                  Enable/disable file logging (default enabled)\n"
-		"\tfilename              Set the filename of the logging file (default killerbeez.log)\n"
-		"\tlevel                 Set the log level (0-4), higher is less verbose, lower is more verbose (default 1)\n"
-		"\tstdout                Enable/disable logging to stdout (default enabled)\n"
+"Logging Options:\n"
+"  file                  Enable/disable file logging (default enabled)\n"
+"  filename              Set the filename of the logging file\n"
+"                          (default killerbeez.log)\n"
+"  level                 Set the log level (0-4), higher is less verbose, lower\n"
+"                          is more verbose (default 1)\n"
+"  stdout                Enable/disable logging to stdout (default enabled)\n"
 	);
 }
 
