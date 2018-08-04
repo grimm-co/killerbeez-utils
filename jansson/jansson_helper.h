@@ -164,6 +164,7 @@ extern "C" {
 #define ADD_INT(temp, arg1, dest, name)           ADD_ITEM1(temp, arg1, dest, json_integer, name)
 #define ADD_UINT64T                               ADD_INT //Internally they both use json_integer
 #define ADD_MEM(temp, arg1, arg2, dest, name)     ADD_ITEM2(temp, arg1, arg2, dest, json_mem, name)
+#define ADD_DOUBLE(temp, arg1, dest, name)        ADD_ITEM1(temp, arg1, dest, json_real, name)
 
 #define GET_ITEM(arg1, dest, temp, func, name, ret) \
     temp = func(arg1, name, &ret);                  \
@@ -175,6 +176,7 @@ extern "C" {
 #define GET_INT(temp, arg1, dest, name, ret)      GET_ITEM(arg1, dest, temp, get_int_options, name, ret)
 #define GET_UINT64T(temp, arg1, dest, name, ret)  GET_ITEM(arg1, dest, temp, get_uint64t_options, name, ret)
 #define GET_MEM(temp, arg1, dest, name, ret)      GET_ITEM(arg1, dest, temp, get_mem_options, name, ret)
+#define GET_DOUBLE(temp, arg1, dest, name, ret)   GET_ITEM(arg1, dest, temp, get_double_options, name, ret)
 
 JANSSON_API char * get_string_options(const char * options, const char * option_name, int * result);
 JANSSON_API char * get_string_options_from_json(json_t * root, const char * option_name, int * result);
