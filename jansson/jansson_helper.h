@@ -200,7 +200,7 @@ JANSSON_API char * add_string_option_to_json(const char * root_options, const ch
 JANSSON_API char * add_int_option_to_json(const char * root_options, const char * new_option_name, int new_value);
 
 JANSSON_API int decode_mem_array(const char *json_string, char *** items, size_t ** item_lengths, size_t * items_count);
-JANSSON_API char * encode_mem_array(char ** items, int * item_lengths, size_t items_count, int * output_length);
+JANSSON_API char * encode_mem_array(char ** items, size_t * item_lengths, size_t items_count, int * output_length);
 
 #ifdef __cplusplus
 }
