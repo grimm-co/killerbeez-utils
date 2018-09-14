@@ -660,17 +660,11 @@ int decode_mem_array(const char *json_string, char *** items, size_t ** item_len
  * @param output_length = the length of the returned JSON string
  * @return - a JSON string containing an array of mem items encoding the buffers on success, or NULL on failure
  */
-char * encode_mem_array(char ** items, int * item_lengths, size_t items_count, int * output_length)
+char * encode_mem_array(char ** items, size_t * item_lengths, size_t items_count, int * output_length)
 {
 	json_t *items_obj, *item_obj;
 	size_t i;
 	char * ret;
-
-	for (i = 0; i < items_count; i++)
-	{
-		if (item_lengths[i] < 0)
-			return NULL;
-	}
 
 	items_obj = json_array();
 	if (!items_obj)
