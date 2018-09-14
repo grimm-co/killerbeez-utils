@@ -20,6 +20,10 @@
 #define F_OK 0
 #else
 
+#ifdef __APPLE__
+#include <mach-o/dyld.h> // _NSGetExecutablePath
+#endif
+
 #include <errno.h>
 #include <libgen.h>
 #include <signal.h>
@@ -499,20 +503,30 @@ UTILS_API int write_buffer_to_file(char * filename, char * buffer, size_t length
 UTILS_API char * filename_relative_to_binary_dir(char * relative_path) {
 	char exedir[2*MAX_PATH], temppath[MAX_PATH];
 	int len;
+
+// write full path into exedir
 #ifdef _WIN32
 	if (!GetModuleFileName(NULL, exedir, 2*MAX_PATH)) {
 		return NULL;
 	}
 	PathRemoveFileSpec(exedir);  // Cut off file name
 	len = snprintf(temppath, MAX_PATH, "%s\\%s", exedir, relative_path);
-#else
-	if ((len = readlink("/proc/self/exe", exedir, MAX_PATH)) < 0) {
+#elif __APPLE__
+	unsigned int bufsize = sizeof(exedir) + 1;
+	if (_NSGetExecutablePath(exedir, &bufsize) != 0)
 		return NULL;
-	}
+	realpath(exedir, temppath);
+	dirname_r(temppath, temppath); // Cut off file name
+	len = snprintf(temppath, MAX_PATH, "%s/%s", temppath, relative_path);
+#else
+	if ((len = readlink("/proc/self/exe", exedir, MAX_PATH)) < 0)
+		return NULL;
+
 	exedir[len] = 0; //readlink doesn't null terminate
 	dirname(exedir); // Cut off file name
 	len = snprintf(temppath, MAX_PATH, "%s/%s", exedir, relative_path);
 #endif
+
 	if (len == MAX_PATH) {
 		return NULL;
 	}
