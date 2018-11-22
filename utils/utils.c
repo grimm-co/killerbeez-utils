@@ -350,24 +350,25 @@ UTILS_API int get_process_status(pid_t pid)
 	// We can't use kill here, because it'll return "alive" if the process is
 	// in a zombie state (ie, unreaped).  So, we have to reap here.
 
-	int status[1];
+	int status;
 	pid_t result;
 
 	// WNOHANG result: 0 means it exists and is alive, pid means it has exited,
 	// -1 means error
-	result = waitpid(pid, status, WNOHANG);
+	result = waitpid(pid, &status, WNOHANG);
 
-	if (result == 0)
+	if(result == 0) {
 		return FUZZ_RUNNING;
-	else if (result > 0)
-	{
-		if (WIFEXITED(*status))
+	} else if (result > 0) {
+		if(WIFEXITED(status))
 			return FUZZ_NONE; // it exited normally
-		else
+		if(WIFSIGNALED(status))
 			return FUZZ_CRASH; // it crashed
 	}
-	else // result < 0 , we already checked, bad
-		return FUZZ_ERROR;
+	// either waitpid failed, or the process is not running, did not exit
+	// normally, and was not signaled, in either case we don't know what
+	// went wrong
+	return FUZZ_ERROR;
 }
 #endif
 
